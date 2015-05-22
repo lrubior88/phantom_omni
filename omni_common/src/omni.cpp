@@ -94,11 +94,19 @@ public:
     stream2 << omni_name << "_sensable";
     sensable_frame_name = std::string(stream2.str());
 
-    for (int i = 0; i < 7; i++) {
-      std::ostringstream stream1;
-      stream1 << omni_name << "_link" << i;
-      link_names[i] = std::string(stream1.str());
-    }
+    //~ for (int i = 0; i < 7; i++) {
+      //~ std::ostringstream stream1;
+      //~ stream1 << omni_name << "_link" << i;
+      //~ link_names[i] = std::string(stream1.str());
+    //~ }
+    
+    link_names[0] = "base";
+    link_names[1] = "torso";
+    link_names[2] = "upper_arm";
+    link_names[3] = "lower_arm";
+    link_names[4] = "wrist";
+    link_names[5] = "tip";
+    link_names[6] = "stylus";
 
     state = s;
     state->buttons[0] = 0;
@@ -153,7 +161,7 @@ public:
     joint_state.name[4] = "pitch";
     joint_state.position[4] = -state->thetas[5] - 3*M_PI/4;
     joint_state.name[5] = "roll";
-    joint_state.position[5] = -state->thetas[6] - M_PI;
+    joint_state.position[5] = state->thetas[6] + M_PI;
     joint_pub.publish(joint_state);
 
     //Sample 'end effector' pose

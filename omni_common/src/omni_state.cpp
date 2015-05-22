@@ -61,6 +61,7 @@ public:
   ros::Publisher joint_publisher;
   ros::Subscriber haptic_sub;
   std::string omni_name, ref_frame, units;
+  std::string link_names[7];
 
   OmniState *state;
 
@@ -99,6 +100,14 @@ public:
     std::string joint_topic_name = std::string(stream5.str());
     joint_publisher = n.advertise<sensor_msgs::JointState>(joint_topic_name.c_str(), 1);
 
+    link_names[0] = "base";
+    link_names[1] = "torso";
+    link_names[2] = "upper_arm";
+    link_names[3] = "lower_arm";
+    link_names[4] = "wrist";
+    link_names[5] = "tip";
+    link_names[6] = "stylus";
+    
     state = s;
     state->buttons[0] = 0;
     state->buttons[1] = 0;
@@ -196,7 +205,7 @@ public:
     // Build the pose msg
     geometry_msgs::PoseStamped pose_msg;
     pose_msg.header = state_msg.header;
-    pose_msg.header.frame_id = ref_frame;
+    pose_msg.header.frame_id = link_names[0].c_str();
     pose_msg.pose = state_msg.pose;
     pose_msg.pose.position.x /= 1000.0;
     pose_msg.pose.position.y /= 1000.0;

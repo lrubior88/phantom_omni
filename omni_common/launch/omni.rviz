@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /Pose1
       Splitter Ratio: 0.449527
     Tree Height: 823
   - Class: rviz/Selection
@@ -48,7 +49,7 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: true
-    - Alpha: 1
+    - Alpha: 0.2
       Class: rviz/RobotModel
       Collision Enabled: false
       Enabled: true
@@ -99,6 +100,62 @@ Visualization Manager:
       Update Interval: 0
       Value: true
       Visual Enabled: true
+    - Class: rviz/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+        base:
+          Value: true
+        lower_arm:
+          Value: true
+        stylus:
+          Value: true
+        tip:
+          Value: true
+        torso:
+          Value: true
+        upper_arm:
+          Value: true
+        wrist:
+          Value: true
+      Marker Scale: 0.2
+      Name: TF
+      Show Arrows: false
+      Show Axes: true
+      Show Names: true
+      Tree:
+        base:
+          torso:
+            upper_arm:
+              lower_arm:
+                wrist:
+                  tip:
+                    stylus:
+                      {}
+      Update Interval: 0
+      Value: true
+    - Alpha: 1
+      Axes Length: 0.05
+      Axes Radius: 0.005
+      Class: rviz/Pose
+      Color: 255; 25; 0
+      Enabled: true
+      Head Length: 0.03
+      Head Radius: 0.01
+      Name: Pose
+      Shaft Length: 0.2
+      Shaft Radius: 0.005
+      Shape: Axes
+      Topic: /phantom/pose
+      Value: true
+    - Class: rviz/Axes
+      Enabled: true
+      Length: 0.05
+      Name: Axes
+      Radius: 0.005
+      Reference Frame: <Fixed Frame>
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -123,17 +180,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 0.584358
+      Distance: 0.783897
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.06
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
       Focal Point:
-        X: 0.227645
-        Y: 0.140064
-        Z: 0.214883
+        X: -0.00796959
+        Y: 0.0169985
+        Z: 0.00137482
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.435398
+      Pitch: 0.295399
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.550386
+      Yaw: 2.09539
     Saved: ~
 Window Geometry:
   Displays:
@@ -151,5 +213,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1627
-  X: 53
+  X: 58
   Y: 24
