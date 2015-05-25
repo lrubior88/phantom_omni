@@ -25,20 +25,15 @@
 #include "omni_msgs/OmniState.h"
 #include <pthread.h>
 
+#include <tf/transform_broadcaster.h>
+
+
 float prev_time;
 int calibrationStyle;
 
 struct OmniState {
   hduVector3Dd position;  //3x1 vector of position
   hduVector3Dd velocity;  //3x1 vector of velocity
-  hduVector3Dd inp_vel1;  //3x1 history of velocity used for filtering velocity estimate
-  hduVector3Dd inp_vel2;
-  hduVector3Dd inp_vel3;
-  hduVector3Dd out_vel1;
-  hduVector3Dd out_vel2;
-  hduVector3Dd out_vel3;
-  hduVector3Dd pos_hist1; //3x1 history of position used for 2nd order backward difference estimate of velocity
-  hduVector3Dd pos_hist2;
   hduQuaternion rot;
   hduVector3Dd joints;
   hduVector3Dd force;   //3 element double vector force[0], force[1], force[2]
@@ -49,6 +44,7 @@ struct OmniState {
   bool close_gripper;
   hduVector3Dd lock_pos;
   double units_ratio;
+  hduMatrix omni_mx;
 };
 
 class PhantomROS {
@@ -115,14 +111,6 @@ public:
     state->buttons_prev[1] = 0;
     hduVector3Dd zeros(0, 0, 0);
     state->velocity = zeros;
-    state->inp_vel1 = zeros;  //3x1 history of velocity
-    state->inp_vel2 = zeros;  //3x1 history of velocity
-    state->inp_vel3 = zeros;  //3x1 history of velocity
-    state->out_vel1 = zeros;  //3x1 history of velocity
-    state->out_vel2 = zeros;  //3x1 history of velocity
-    state->out_vel3 = zeros;  //3x1 history of velocity
-    state->pos_hist1 = zeros; //3x1 history of position
-    state->pos_hist2 = zeros; //3x1 history of position
     state->lock = false;
     state->close_gripper = false;
     state->lock_pos = zeros;
@@ -166,15 +154,24 @@ public:
     // Locked
     state_msg.locked = state->lock;
     state_msg.close_gripper = state->close_gripper;
+    
+    // Notice that we are changing Y <---> Z and inverting the Z-force_feedback
     // Position
     state_msg.pose.position.x = state->position[0];
-    state_msg.pose.position.y = state->position[1];
-    state_msg.pose.position.z = state->position[2];
+    state_msg.pose.position.y = -state->position[2];
+    state_msg.pose.position.z = state->position[1];
     // Orientation
-    state_msg.pose.orientation.x = state->rot.v()[0];
-    state_msg.pose.orientation.y = state->rot.v()[1];
-    state_msg.pose.orientation.z = state->rot.v()[2];
-    state_msg.pose.orientation.w = state->rot.s();
+
+	tf::Transform transform;
+	transform.setOrigin(tf::Vector3(state->omni_mx[3][0], state->omni_mx[3][1], state->omni_mx[3][2]));
+	transform.getBasis().setValue(state->omni_mx[0][0], state->omni_mx[1][0], state->omni_mx[2][0],
+                                      state->omni_mx[0][1], state->omni_mx[1][1], state->omni_mx[2][1], 
+                                      state->omni_mx[0][2], state->omni_mx[1][2], state->omni_mx[2][2]);
+  
+    state_msg.pose.orientation.x = transform.getRotation()[0];
+    state_msg.pose.orientation.y = -transform.getRotation()[2];
+    state_msg.pose.orientation.z = transform.getRotation()[1];
+    state_msg.pose.orientation.w = transform.getRotation()[3];
     // Velocity
     state_msg.velocity.x = state->velocity[0];
     state_msg.velocity.y = state->velocity[1];
@@ -199,7 +196,7 @@ public:
     joint_state.name[4] = "pitch";
     joint_state.position[4] = -state->thetas[5] - 3*M_PI/4;
     joint_state.name[5] = "roll";
-    joint_state.position[5] = -state->thetas[6] - M_PI;
+    joint_state.position[5] = state->thetas[6] + M_PI;
     joint_publisher.publish(joint_state);
     
     // Build the pose msg
@@ -240,46 +237,15 @@ HDCallbackCode HDCALLBACK omni_state_callback(void *pUserData)
     }
   hdBeginFrame(hdGetCurrentDevice());
   // Get transform and angles
-  hduMatrix transform;
-  hdGetDoublev(HD_CURRENT_TRANSFORM, transform);
-  hdGetDoublev(HD_CURRENT_JOINT_ANGLES, omni_state->joints);
   hduVector3Dd gimbal_angles;
+
+  hdGetDoublev(HD_CURRENT_POSITION, omni_state->position); 
+  hdGetDoublev(HD_CURRENT_TRANSFORM, omni_state->omni_mx);
+  hdGetDoublev(HD_CURRENT_VELOCITY, omni_state->velocity);
+  hdGetDoublev(HD_CURRENT_JOINT_ANGLES, omni_state->joints);
   hdGetDoublev(HD_CURRENT_GIMBAL_ANGLES, gimbal_angles);
-  // Notice that we are inverting the Z-position value and changing Y <---> Z
-  // Position
-  omni_state->position = hduVector3Dd(transform[3][0], -transform[3][2], transform[3][1]);
-  omni_state->position /= omni_state->units_ratio;
-  // Orientation (quaternion)
-  hduMatrix rotation(transform);
-  rotation.getRotationMatrix(rotation);
-  hduMatrix rotation_offset( 0.0, -1.0, 0.0, 0.0,
-                             1.0,  0.0, 0.0, 0.0,
-                             0.0,  0.0, 1.0, 0.0,
-                             0.0,  0.0, 0.0, 1.0);
-  rotation_offset.getRotationMatrix(rotation_offset);
-  omni_state->rot = hduQuaternion(rotation_offset * rotation);
-  // Velocity estimation
-  hduVector3Dd vel_buff(0, 0, 0);
-  vel_buff = (omni_state->position * 3 - 4 * omni_state->pos_hist1
-      + omni_state->pos_hist2) / 0.002;  //(units)/s, 2nd order backward dif
-  omni_state->velocity = (.2196 * (vel_buff + omni_state->inp_vel3)
-      + .6588 * (omni_state->inp_vel1 + omni_state->inp_vel2)) / 1000.0
-      - (-2.7488 * omni_state->out_vel1 + 2.5282 * omni_state->out_vel2
-          - 0.7776 * omni_state->out_vel3);  //cutoff freq of 20 Hz
-  omni_state->pos_hist2 = omni_state->pos_hist1;
-  omni_state->pos_hist1 = omni_state->position;
-  omni_state->inp_vel3 = omni_state->inp_vel2;
-  omni_state->inp_vel2 = omni_state->inp_vel1;
-  omni_state->inp_vel1 = vel_buff;
-  omni_state->out_vel3 = omni_state->out_vel2;
-  omni_state->out_vel2 = omni_state->out_vel1;
-  omni_state->out_vel1 = omni_state->velocity;
+
   
-  //~ // Set forces if locked
-  //~ if (omni_state->lock == true) {
-    //~ omni_state->force = 0.04 * omni_state->units_ratio * (omni_state->lock_pos - omni_state->position)
-        //~ - 0.001 * omni_state->velocity;
-  //~ }
   hduVector3Dd feedback;
   // Notice that we are changing Y <---> Z and inverting the Z-force_feedback
   feedback[0] = omni_state->force[0];
