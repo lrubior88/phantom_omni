@@ -7,7 +7,7 @@
 	<param name="robot_description" command="cat $(find omni_description)/urdf/omni.urdf" />
 	<node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
 	
-  <node name="omni_state" pkg="omni_common" type="omni_state" output="screen"> 
+  <node name="omni_state" pkg="omni_common" type="omni_state2" output="screen"> 
     <param name="omni_name" value="$(arg omni_name)"/>
     <param name="publish_rate" value="$(arg publish_rate)"/>
     <param name="reference_frame" value="$(arg reference_frame)"/>
