@@ -27,13 +27,20 @@
 
 #include <tf/transform_broadcaster.h>
 
-
 float prev_time;
 int calibrationStyle;
 
 struct OmniState {
   hduVector3Dd position;  //3x1 vector of position
   hduVector3Dd velocity;  //3x1 vector of velocity
+  hduVector3Dd inp_vel1;  //3x1 history of velocity used for filtering velocity estimate
+  hduVector3Dd inp_vel2;
+  hduVector3Dd inp_vel3;
+  hduVector3Dd out_vel1;
+  hduVector3Dd out_vel2;
+  hduVector3Dd out_vel3;
+  hduVector3Dd pos_hist1; //3x1 history of position used for 2nd order backward difference estimate of velocity
+  hduVector3Dd pos_hist2;
   hduQuaternion rot;
   hduVector3Dd joints;
   hduVector3Dd force;   //3 element double vector force[0], force[1], force[2]
@@ -56,7 +63,7 @@ public:
   ros::Publisher button_publisher;
   ros::Publisher joint_publisher;
   ros::Subscriber haptic_sub;
-  std::string omni_name, ref_frame, units;
+  std::string omni_name, ref_frame, units,type;
   std::string link_names[7];
 
   OmniState *state;
@@ -65,6 +72,7 @@ public:
     ros::param::param(std::string("~omni_name"), omni_name, std::string("phantom"));
     ros::param::param(std::string("~reference_frame"), ref_frame, std::string("/map"));
     ros::param::param(std::string("~units"), units, std::string("mm"));
+    ros::param::param(std::string("~type"), type, std::string("left_"));
     
     //Publish button state on NAME/button
     std::ostringstream stream1;
@@ -96,13 +104,43 @@ public:
     std::string joint_topic_name = std::string(stream5.str());
     joint_publisher = n.advertise<sensor_msgs::JointState>(joint_topic_name.c_str(), 1);
 
-    link_names[0] = "base";
-    link_names[1] = "torso";
-    link_names[2] = "upper_arm";
-    link_names[3] = "lower_arm";
-    link_names[4] = "wrist";
-    link_names[5] = "tip";
-    link_names[6] = "stylus";
+
+	// Link names
+    std::ostringstream stream_base;
+    stream_base << type << "base";
+    std::string base = std::string(stream_base.str());
+    
+    std::ostringstream stream_torso;
+    stream_torso << type << "torso";
+    std::string torso = std::string(stream_torso.str());
+    
+    std::ostringstream stream_upper_arm;
+    stream_upper_arm << type << "upper_arm";
+    std::string upper_arm = std::string(stream_upper_arm.str());
+    
+    std::ostringstream stream_lower_arm;
+    stream_lower_arm << type << "lower_arm";
+    std::string lower_arm = std::string(stream_lower_arm.str());
+    
+    std::ostringstream stream_wrist;
+    stream_wrist << type << "wrist";
+    std::string wrist = std::string(stream_wrist.str());
+    
+    std::ostringstream stream_tip;
+    stream_tip << type << "tip";
+    std::string tip = std::string(stream_tip.str());
+    
+    std::ostringstream stream_stylus;
+    stream_stylus << type << "stylus";
+    std::string stylus = std::string(stream_stylus.str());
+    
+    link_names[0] = base.c_str();
+    link_names[1] = torso.c_str();
+    link_names[2] = upper_arm.c_str();
+    link_names[3] = lower_arm.c_str();
+    link_names[4] = wrist.c_str();
+    link_names[5] = tip.c_str();
+    link_names[6] = stylus.c_str();
     
     state = s;
     state->buttons[0] = 0;
@@ -111,6 +149,14 @@ public:
     state->buttons_prev[1] = 0;
     hduVector3Dd zeros(0, 0, 0);
     state->velocity = zeros;
+    state->inp_vel1 = zeros;  //3x1 history of velocity
+    state->inp_vel2 = zeros;  //3x1 history of velocity
+    state->inp_vel3 = zeros;  //3x1 history of velocity
+    state->out_vel1 = zeros;  //3x1 history of velocity
+    state->out_vel2 = zeros;  //3x1 history of velocity
+    state->out_vel3 = zeros;  //3x1 history of velocity
+    state->pos_hist1 = zeros; //3x1 history of position
+    state->pos_hist2 = zeros; //3x1 history of position
     state->lock = false;
     state->close_gripper = false;
     state->lock_pos = zeros;
@@ -172,30 +218,57 @@ public:
     state_msg.pose.orientation.y = -transform.getRotation()[2];
     state_msg.pose.orientation.z = transform.getRotation()[1];
     state_msg.pose.orientation.w = transform.getRotation()[3];
+    
     // Velocity
     state_msg.velocity.x = state->velocity[0];
     state_msg.velocity.y = state->velocity[1];
     state_msg.velocity.z = state->velocity[2];
+  
     // TODO: Append Current to the state msg
     state_msg.header.stamp = ros::Time::now();
     state_publisher.publish(state_msg);
+    
+    // Joint names
+    std::ostringstream stream_waist;
+    stream_waist << type << "waist";
+    std::string waist = std::string(stream_waist.str());
+    
+    std::ostringstream stream_shoulder;
+    stream_shoulder << type << "shoulder";
+    std::string shoulder = std::string(stream_shoulder.str());
+    
+    std::ostringstream stream_elbow;
+    stream_elbow << type << "elbow";
+    std::string elbow = std::string(stream_elbow.str());
+    
+    std::ostringstream stream_yaw;
+    stream_yaw << type << "yaw";
+    std::string yaw = std::string(stream_yaw.str());
+    
+    std::ostringstream stream_pitch;
+    stream_pitch << type << "pitch";
+    std::string pitch = std::string(stream_pitch.str());
+    
+    std::ostringstream stream_roll;
+    stream_roll << type << "roll";
+    std::string roll = std::string(stream_roll.str());
     
     // Publish the JointState msg
     sensor_msgs::JointState joint_state;
     joint_state.header.stamp = ros::Time::now();
     joint_state.name.resize(6);
     joint_state.position.resize(6);
-    joint_state.name[0] = "waist";
+    joint_state.name[0] = waist.c_str();
     joint_state.position[0] = -state->thetas[1];
-    joint_state.name[1] = "shoulder";
+    joint_state.name[1] = shoulder.c_str();
     joint_state.position[1] = state->thetas[2];
-    joint_state.name[2] = "elbow";
+    joint_state.name[2] = elbow.c_str();
     joint_state.position[2] = state->thetas[3];
-    joint_state.name[3] = "yaw";
+    joint_state.name[3] = yaw.c_str();
     joint_state.position[3] = -state->thetas[4] + M_PI;
-    joint_state.name[4] = "pitch";
+    joint_state.name[4] = pitch.c_str();
     joint_state.position[4] = -state->thetas[5] - 3*M_PI/4;
-    joint_state.name[5] = "roll";
+    joint_state.name[5] = roll.c_str();
     joint_state.position[5] = state->thetas[6] + M_PI;
     joint_publisher.publish(joint_state);
     
@@ -241,17 +314,64 @@ HDCallbackCode HDCALLBACK omni_state_callback(void *pUserData)
 
   hdGetDoublev(HD_CURRENT_POSITION, omni_state->position); 
   hdGetDoublev(HD_CURRENT_TRANSFORM, omni_state->omni_mx);
-  hdGetDoublev(HD_CURRENT_VELOCITY, omni_state->velocity);
+  //~ hdGetDoublev(HD_CURRENT_VELOCITY, omni_state->velocity);
   hdGetDoublev(HD_CURRENT_JOINT_ANGLES, omni_state->joints);
   hdGetDoublev(HD_CURRENT_GIMBAL_ANGLES, gimbal_angles);
-
   
-  hduVector3Dd feedback;
-  // Notice that we are changing Y <---> Z and inverting the Z-force_feedback
-  feedback[0] = omni_state->force[0];
-  feedback[1] = omni_state->force[2];
-  feedback[2] = -omni_state->force[1];
-  hdSetDoublev(HD_CURRENT_FORCE, feedback);
+    // Velocity estimation
+	hduVector3Dd vel_buff(0, 0, 0);
+	vel_buff = (omni_state->position * 3 - 4 * omni_state->pos_hist1
+      + omni_state->pos_hist2) / 0.002;  //(units)/s, 2nd order backward dif
+	omni_state->velocity = (.2196 * (vel_buff + omni_state->inp_vel3)
+      + .6588 * (omni_state->inp_vel1 + omni_state->inp_vel2)) / 1000.0
+      - (-2.7488 * omni_state->out_vel1 + 2.5282 * omni_state->out_vel2
+      - 0.7776 * omni_state->out_vel3);  //cutoff freq of 20 Hz
+	omni_state->pos_hist2 = omni_state->pos_hist1;
+	omni_state->pos_hist1 = omni_state->position;
+	omni_state->inp_vel3 = omni_state->inp_vel2;
+	omni_state->inp_vel2 = omni_state->inp_vel1;
+	omni_state->inp_vel1 = vel_buff;
+	omni_state->out_vel3 = omni_state->out_vel2;
+	omni_state->out_vel2 = omni_state->out_vel1;
+	omni_state->out_vel1 = omni_state->velocity;
+  
+  
+  //~ hduVector3Dd feedback;
+  //~ // Notice that we are changing Y <---> Z and inverting the Z-force_feedback
+  //~ feedback[0] = omni_state->force[0];
+  //~ feedback[1] = omni_state->force[2];
+  //~ feedback[2] = -omni_state->force[1];
+  //~ hdSetDoublev(HD_CURRENT_FORCE, feedback);
+  
+  hduVector3Dd zeros(0, 0, 0);
+  if (omni_state->lock == true) {
+	  ROS_INFO("vel_x = %f", omni_state->velocity[0]);
+	  //~ ROS_INFO("vel_y = %f", omni_state->velocity[1]);
+	  //~ ROS_INFO("vel_z = %f", omni_state->velocity[2]);
+	  
+	double sum_pos = omni_state->position[0]
+					+ omni_state->position[1]
+					+ omni_state->position[2];
+	  
+	double rad_ball = sqrt(pow(omni_state->position[0],2)
+						+ pow(omni_state->position[1],2)
+						+ pow(omni_state->position[2],2));
+	  
+	if (rad_ball < 50){
+		omni_state->force[0] = 0.5 * (50 - rad_ball)
+			* (omni_state->position[0] / rad_ball)
+			- 0.001 * omni_state->velocity[0];
+			omni_state->force[1] = 0.5 * (50 - rad_ball)
+			* (omni_state->position[1] / rad_ball)
+			- 0.001 * omni_state->velocity[1];
+			omni_state->force[2] = 0.5 * (50 - rad_ball)
+			* (omni_state->position[2] / rad_ball)
+			- 0.001 * omni_state->velocity[2];
+	}else{
+		omni_state->force = zeros;
+	}
+  }
+  hdSetDoublev(HD_CURRENT_FORCE, omni_state->force);
 
   //Get buttons
   int nButtons = 0;
