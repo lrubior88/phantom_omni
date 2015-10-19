@@ -72,7 +72,7 @@ public:
     ros::param::param(std::string("~omni_name"), omni_name, std::string("phantom"));
     ros::param::param(std::string("~reference_frame"), ref_frame, std::string("/map"));
     ros::param::param(std::string("~units"), units, std::string("mm"));
-    ros::param::param(std::string("~type"), type, std::string("left_"));
+    ros::param::param(std::string("~type"), type, std::string(""));
     
     //Publish button state on NAME/button
     std::ostringstream stream1;
