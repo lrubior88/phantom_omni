@@ -334,44 +334,13 @@ HDCallbackCode HDCALLBACK omni_state_callback(void *pUserData)
 	omni_state->out_vel3 = omni_state->out_vel2;
 	omni_state->out_vel2 = omni_state->out_vel1;
 	omni_state->out_vel1 = omni_state->velocity;
-  
-  
-  //~ hduVector3Dd feedback;
-  //~ // Notice that we are changing Y <---> Z and inverting the Z-force_feedback
-  //~ feedback[0] = omni_state->force[0];
-  //~ feedback[1] = omni_state->force[2];
-  //~ feedback[2] = -omni_state->force[1];
-  //~ hdSetDoublev(HD_CURRENT_FORCE, feedback);
-  
-  hduVector3Dd zeros(0, 0, 0);
-  if (omni_state->lock == true) {
-	  ROS_INFO("vel_x = %f", omni_state->velocity[0]);
-	  //~ ROS_INFO("vel_y = %f", omni_state->velocity[1]);
-	  //~ ROS_INFO("vel_z = %f", omni_state->velocity[2]);
-	  
-	double sum_pos = omni_state->position[0]
-					+ omni_state->position[1]
-					+ omni_state->position[2];
-	  
-	double rad_ball = sqrt(pow(omni_state->position[0],2)
-						+ pow(omni_state->position[1],2)
-						+ pow(omni_state->position[2],2));
-	  
-	if (rad_ball < 50){
-		omni_state->force[0] = 0.5 * (50 - rad_ball)
-			* (omni_state->position[0] / rad_ball)
-			- 0.001 * omni_state->velocity[0];
-			omni_state->force[1] = 0.5 * (50 - rad_ball)
-			* (omni_state->position[1] / rad_ball)
-			- 0.001 * omni_state->velocity[1];
-			omni_state->force[2] = 0.5 * (50 - rad_ball)
-			* (omni_state->position[2] / rad_ball)
-			- 0.001 * omni_state->velocity[2];
-	}else{
-		omni_state->force = zeros;
-	}
-  }
-  hdSetDoublev(HD_CURRENT_FORCE, omni_state->force);
+
+  hduVector3Dd feedback;
+  // Notice that we are changing Y <---> Z and inverting the Z-force_feedback
+  feedback[0] = omni_state->force[0];
+  feedback[1] = omni_state->force[2];
+  feedback[2] = -omni_state->force[1];
+  hdSetDoublev(HD_CURRENT_FORCE, feedback);
 
   //Get buttons
   int nButtons = 0;
