@@ -27,8 +27,13 @@
 
 #include <tf/transform_broadcaster.h>
 
+#include <time.h>
+#include <sys/time.h>
+
 float prev_time;
 int calibrationStyle;
+
+struct timeval t_aux;
 
 struct OmniState {
   hduVector3Dd position;  //3x1 vector of position
@@ -213,10 +218,17 @@ public:
 	transform.getBasis().setValue(state->omni_mx[0][0], state->omni_mx[1][0], state->omni_mx[2][0],
                                       state->omni_mx[0][1], state->omni_mx[1][1], state->omni_mx[2][1], 
                                       state->omni_mx[0][2], state->omni_mx[1][2], state->omni_mx[2][2]);
+     
+    //~ // Rotation with grips                                 
+    //~ state_msg.pose.orientation.x = transform.getRotation()[0];
+    //~ state_msg.pose.orientation.y = -transform.getRotation()[2];
+    //~ state_msg.pose.orientation.z = transform.getRotation()[1];
+    //~ state_msg.pose.orientation.w = transform.getRotation()[3];
   
-    state_msg.pose.orientation.x = transform.getRotation()[0];
-    state_msg.pose.orientation.y = -transform.getRotation()[2];
-    state_msg.pose.orientation.z = transform.getRotation()[1];
+	// Rotation with simulated HUG
+    state_msg.pose.orientation.x = transform.getRotation()[1];
+    state_msg.pose.orientation.y = transform.getRotation()[0];
+    state_msg.pose.orientation.z = -transform.getRotation()[2];
     state_msg.pose.orientation.w = transform.getRotation()[3];
     
     // Velocity
@@ -301,8 +313,25 @@ public:
   }
 };
 
+double timeval_diff(struct timeval *a, struct timeval *b)
+{
+	return (double)(a->tv_sec + (double)a->tv_usec/1000000)-
+			(double)(b->tv_sec + (double)b->tv_usec/1000000);
+}
+
 HDCallbackCode HDCALLBACK omni_state_callback(void *pUserData) 
 {
+	
+  struct timeval t_now;
+  double secs;
+  
+  //~ gettimeofday(&t_now, NULL);
+  //~ secs = timeval_diff(&t_now, &t_aux);
+  //~ ROS_INFO("%f", secs);
+  //~ gettimeofday(&t_aux, NULL);
+  
+  
+  
   OmniState *omni_state = static_cast<OmniState *>(pUserData);
   if (hdCheckCalibration() == HD_CALIBRATION_NEEDS_UPDATE) {
     ROS_DEBUG("Updating calibration...");
@@ -341,6 +370,42 @@ HDCallbackCode HDCALLBACK omni_state_callback(void *pUserData)
   feedback[1] = omni_state->force[2];
   feedback[2] = -omni_state->force[1];
   hdSetDoublev(HD_CURRENT_FORCE, feedback);
+  
+  //~ hduVector3Dd zeros(0, 0, 0);
+  //~ if (omni_state->lock == true) {
+	  //~ ROS_INFO("pos_x = %f", omni_state->position[0]);
+	  //~ ROS_INFO("pos_y = %f", omni_state->position[1]);
+	  //~ ROS_INFO("pos_z = %f", omni_state->position[2]);
+	  
+	//~ double sum_pos = omni_state->position[0]
+					//~ + omni_state->position[1]
+					//~ + omni_state->position[2];
+	  //~ 
+	//~ double rad_ball = sqrt(pow(omni_state->position[0],2)
+						//~ + pow(omni_state->position[1],2)
+						//~ + pow(omni_state->position[2],2));
+	  
+	//~ if (rad_ball < 50){
+		//~ omni_state->force[0] = 0.5 * (50 - rad_ball)
+			//~ * (omni_state->position[0] / rad_ball);
+			//~ - 0.001 * omni_state->velocity[0];
+			//~ omni_state->force[1] = 0.5 * (50 - rad_ball)
+			//~ * (omni_state->position[1] / rad_ball);
+			//~ - 0.001 * omni_state->velocity[1];
+			//~ omni_state->force[2] = 0.5 * (50 - rad_ball)
+			//~ * (omni_state->position[2] / rad_ball);
+			//~ - 0.001 * omni_state->velocity[2];
+			
+	//~ if (omni_state->position[0]>0) {
+        //~ omni_state->force[0] = 2 * (0 - omni_state->position[0]);
+	//~ }else{
+		//~ omni_state->force = zeros;
+	//~ }
+  //~ }
+  //ROS_INFO("f_x = %f", omni_state->force[0]);
+  //ROS_INFO("f_y = %f", omni_state->force[1]);
+  //~ //ROS_INFO("f_z = %f", omni_state->force[2]);
+  //~ hdSetDoublev(HD_CURRENT_FORCE, omni_state->force);
 
   //Get buttons
   int nButtons = 0;
@@ -432,6 +497,7 @@ int main(int argc, char** argv) {
   HDErrorInfo error;
   HHD hHD;
   hHD = hdInitDevice(HD_DEFAULT_DEVICE);
+  gettimeofday(&t_aux, NULL);
   if (HD_DEVICE_ERROR(error = hdGetError())) {
     //hduPrintError(stderr, &error, "Failed to initialize haptic device");
     ROS_ERROR("Failed to initialize haptic device"); //: %s", &error);
