@@ -219,17 +219,23 @@ public:
                                       state->omni_mx[0][1], state->omni_mx[1][1], state->omni_mx[2][1], 
                                       state->omni_mx[0][2], state->omni_mx[1][2], state->omni_mx[2][2]);
      
-    //~ // Rotation with grips                                 
+    // Rotation with grips                                 
     //~ state_msg.pose.orientation.x = transform.getRotation()[0];
     //~ state_msg.pose.orientation.y = -transform.getRotation()[2];
     //~ state_msg.pose.orientation.z = transform.getRotation()[1];
     //~ state_msg.pose.orientation.w = transform.getRotation()[3];
-  
+  //~ 
 	// Rotation with simulated HUG
     state_msg.pose.orientation.x = transform.getRotation()[1];
     state_msg.pose.orientation.y = transform.getRotation()[0];
     state_msg.pose.orientation.z = -transform.getRotation()[2];
     state_msg.pose.orientation.w = transform.getRotation()[3];
+    
+    // General rotation
+    //~ state_msg.pose.orientation.x = transform.getRotation()[0];
+    //~ state_msg.pose.orientation.y = transform.getRotation()[1];
+    //~ state_msg.pose.orientation.z = transform.getRotation()[2];
+    //~ state_msg.pose.orientation.w = transform.getRotation()[3];    
     
     // Velocity
     state_msg.velocity.x = state->velocity[0];
