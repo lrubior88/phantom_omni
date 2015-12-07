@@ -6,9 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /Pose1
-        - /Pose2
-        - /Axes1
       Splitter Ratio: 0.5
     Tree Height: 621
   - Class: rviz/Selection
@@ -180,7 +177,7 @@ Visualization Manager:
       Name: TF
       Show Arrows: true
       Show Axes: true
-      Show Names: true
+      Show Names: false
       Tree:
         world:
           left_base:
@@ -260,22 +257,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.44424
+      Distance: 0.548936
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.0424914
-        Y: -0.000781955
-        Z: 0.0697858
+        X: 0.509433
+        Y: 0.0628628
+        Z: 0.118009
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.165398
+      Pitch: 0.510398
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.950403
+      Yaw: 4.77858
     Saved: ~
 Window Geometry:
   Displays:
