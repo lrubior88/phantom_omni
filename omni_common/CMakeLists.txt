@@ -21,6 +21,8 @@ CATKIN_DEPENDS
   xacro
 )
 
+catkin_python_setup() 
+
 include_directories(${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
 
 find_path(OPENHAPTICS_INCLUDE_DIR NAMES HD/hd.h HL/hl.h HDU/hdu.h)

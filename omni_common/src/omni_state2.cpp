@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/Wrench.h>
 #include <geometry_msgs/WrenchStamped.h>
 #include <urdf/model.h>
@@ -67,6 +68,7 @@ public:
   ros::Publisher pose_publisher;
   ros::Publisher button_publisher;
   ros::Publisher joint_publisher;
+  ros::Publisher velocity_publisher;
   ros::Subscriber haptic_sub;
   std::string omni_name, ref_frame, units,type;
   std::string link_names[7];
@@ -109,6 +111,11 @@ public:
     std::string joint_topic_name = std::string(stream5.str());
     joint_publisher = n.advertise<sensor_msgs::JointState>(joint_topic_name.c_str(), 1);
 
+    //Publish on NAME/velocity
+    std::ostringstream stream6;
+    stream6 << omni_name << "/velocity";
+    std::string vel_topic_name = std::string(stream6.str());
+    velocity_publisher = n.advertise<geometry_msgs::TwistStamped>(vel_topic_name.c_str(), 1);
 
 	// Link names
     std::ostringstream stream_base;
@@ -220,18 +227,18 @@ public:
                                       state->omni_mx[0][2], state->omni_mx[1][2], state->omni_mx[2][2]);
      
     // Rotation with grips                                 
-    //~ state_msg.pose.orientation.x = transform.getRotation()[0];
-    //~ state_msg.pose.orientation.y = -transform.getRotation()[2];
-    //~ state_msg.pose.orientation.z = transform.getRotation()[1];
-    //~ state_msg.pose.orientation.w = transform.getRotation()[3];
+    state_msg.pose.orientation.x = transform.getRotation()[0];
+    state_msg.pose.orientation.y = -transform.getRotation()[2];
+    state_msg.pose.orientation.z = transform.getRotation()[1];
+    state_msg.pose.orientation.w = transform.getRotation()[3];
   //~ 
 	// Rotation with simulated HUG
-    state_msg.pose.orientation.x = transform.getRotation()[1];
-    state_msg.pose.orientation.y = transform.getRotation()[0];
-    state_msg.pose.orientation.z = -transform.getRotation()[2];
-    state_msg.pose.orientation.w = transform.getRotation()[3];
-    
-    // General rotation
+    //~ state_msg.pose.orientation.x = transform.getRotation()[1];
+    //~ state_msg.pose.orientation.y = transform.getRotation()[0];
+    //~ state_msg.pose.orientation.z = -transform.getRotation()[2];
+    //~ state_msg.pose.orientation.w = transform.getRotation()[3];
+    //~ 
+    //~ // General rotation
     //~ state_msg.pose.orientation.x = transform.getRotation()[0];
     //~ state_msg.pose.orientation.y = transform.getRotation()[1];
     //~ state_msg.pose.orientation.z = transform.getRotation()[2];
@@ -241,6 +248,15 @@ public:
     state_msg.velocity.x = state->velocity[0];
     state_msg.velocity.y = state->velocity[1];
     state_msg.velocity.z = state->velocity[2];
+    
+    // Build the velocity msg
+    geometry_msgs::TwistStamped vel_msg;
+    vel_msg.header = state_msg.header;
+    vel_msg.header.frame_id = link_names[0].c_str();
+    vel_msg.twist.linear.x = state_msg.velocity.x/1000.0;
+    vel_msg.twist.linear.y = state_msg.velocity.y/1000.0;
+    vel_msg.twist.linear.z = state_msg.velocity.z/1000.0;
+    velocity_publisher.publish(vel_msg);
   
     // TODO: Append Current to the state msg
     state_msg.header.stamp = ros::Time::now();
