@@ -25,12 +25,19 @@ class Send_udp_info:
     self.button_topic = "/%s/button" % self.omni_name
       
     # Setup Subscriber
-    rospy.Subscriber(self.pose_topic, OmniState, self.omni_command_cb)
+    self.omni_msg = None
+    rospy.Subscriber(self.pose_topic, OmniState, self.omni_command_cb)    
+    while not rospy.is_shutdown():
+            if (self.omni_msg == None):
+                rospy.sleep(0.01)
+            else:
+                break
     self.omni_msg = OmniState()
-    rospy.Subscriber(self.button_topic, OmniButtonEvent, self.button_command_cb)
+
     self.button_msg = OmniButtonEvent()
     self.button_msg.grey_button = 0.0
     self.button_msg.white_button = 0.0
+    rospy.Subscriber(self.button_topic, OmniButtonEvent, self.button_command_cb)
 
     # Set up write socket
     self.write_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

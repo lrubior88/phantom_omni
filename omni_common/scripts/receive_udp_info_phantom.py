@@ -39,7 +39,6 @@ class Receive_udp_info:
       try:
         data,addr=self.read_socket.recvfrom(1024)
         if data:
-            rospy.loginfo('Received')
             forces = _struct_d3.unpack(data[0:24])
             
             f_msg = OmniFeedback()
