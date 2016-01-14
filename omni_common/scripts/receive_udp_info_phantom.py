@@ -64,6 +64,7 @@ class Receive_udp_info:
 
   def shutdown_hook(self):
     # Do some cleaning depending on the app
+    rospy.logwarn('Receive_udp_info_phantom.py SHUTDOWN')
     self.read_socket.close()
     pass
 

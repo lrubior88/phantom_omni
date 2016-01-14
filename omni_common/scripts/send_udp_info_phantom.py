@@ -38,6 +38,9 @@ class Send_udp_info:
     self.button_msg.grey_button = 0.0
     self.button_msg.white_button = 0.0
     rospy.Subscriber(self.button_topic, OmniButtonEvent, self.button_command_cb)
+    
+    # Register rospy shutdown hook
+    rospy.on_shutdown(self.shutdown_hook)
 
     # Set up write socket
     self.write_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -91,7 +94,12 @@ class Send_udp_info:
     if not rospy.has_param(name):
       rospy.logwarn('Parameter [%s] not found, using default: %s' % (name, default))
     return rospy.get_param(name, default)
-
+    
+  def shutdown_hook(self):
+    # Do some cleaning depending on the app
+    rospy.logwarn('Send_udp_info_phantom.py SHUTDOWN')
+    self.write_socket.close()
+    pass
 
 if __name__ == '__main__':
   node_name = os.path.splitext(os.path.basename(__file__))[0]
