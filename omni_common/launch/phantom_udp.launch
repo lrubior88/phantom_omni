@@ -2,8 +2,8 @@
 	
   <arg name="master_name" default="phantom"/>
   <arg name="publish_rate" default="1000.0"/>
-  <arg name="ip_phantom" default="192.168.0.108"/>
-  <arg name="ip_system" default="192.168.0.108"/>
+  <arg name="ip_phantom" default="10.1.8.120"/>
+  <arg name="ip_system" default="10.1.8.120"/>
   <arg name="write_port_pose" default="34000"/>
   <arg name="write_port_button" default="34001"/>
   <arg name="read_port" default="33000"/>

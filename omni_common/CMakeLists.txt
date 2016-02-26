@@ -48,3 +48,7 @@ add_dependencies(omni_state2 omni_msgs_gencpp)
 add_executable(joint_states_node src/joint_states_node.cpp)
 target_link_libraries(joint_states_node ${catkin_LIBRARIES}) 
 add_dependencies(joint_states_node omni_msgs_gencpp)
+
+add_executable(oculus_udp_rcv src/oculus_udp_rcv.cpp)
+target_link_libraries(oculus_udp_rcv ${catkin_LIBRARIES}) 
+add_dependencies(oculus_udp_rcv omni_msgs_gencpp)
